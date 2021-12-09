@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Change the Product/@Id on any installation file changes. Modify the Product Version for any minor changes. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+	<Product Name="Toggle Dark-Light Mode" Id="*" UpgradeCode="9bf9dd6a-aced-4905-98db-3572c6699b8d" Language="1033" Version="1.0.3.0" Manufacturer="danielgjackson">
+		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perUser" /><!-- "perMachine" / "perUser" -->
+		
+		<MajorUpgrade AllowDowngrades="yes" /><!-- AllowSameVersionUpgrades="yes" -->
+		
+		<Media Id="1" Cabinet="toggle.cab" EmbedCab="yes" />
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<!-- Program Files -->
+			<Directory Id="LocalAppDataFolder"> <!-- "ProgramFilesFolder" / "AppDataFolder" -->
+				<Directory Id="INSTALLDIR" Name="Toggle Dark-Light Mode">
+					<Component Id="MainExecutable" Guid="e1111df2-0c33-4671-9fe2-8f7988a9fe24">
+						<RegistryValue Root="HKCU" Key="SOFTWARE\danielgjackson\Toggle Dark-Light Mode" Type="string" Name="MainExecutable" Value="-" KeyPath="yes" />
+						<File Id="toggleEXE" Name="toggle.exe" Source="toggle.exe" Vital="yes"> <!--  KeyPath="yes" -->
+							<Shortcut Id="startmenuToggle" Directory="ProgramMenuDir" Name="Toggle Dark-Light Mode" WorkingDirectory="INSTALLDIR" Icon="toggle.exe" IconIndex="0" /> <!-- Advertise="yes" -->
+						</File>
+						<RemoveFolder Id="INSTALLDIR" On="uninstall" />
+					</Component>
+				</Directory>
+			</Directory>
+			<!-- Start Menu -->
+			<Directory Id="StartMenuFolder"> <!-- "ProgramMenuFolder" / "StartMenuFolder" ? -->
+				<Directory Id="ProgramMenuDir" Name="Toggle Dark-Light Mode">
+					<Component Id="ProgramMenuDir" Guid="d21d1240-0a74-4b15-b957-2303c4f0ee15">
+						<RegistryValue Root="HKCU" Key="SOFTWARE\danielgjackson\Toggle Dark-Light Mode" Type="string" Name="ProgramMenuDir" Value="-" KeyPath="yes" />
+						<RemoveFolder Id="ProgramMenuDir" On="uninstall" />
+					</Component>  
+				</Directory>  
+			</Directory> 
+			<!-- Auto-start -->
+			<Directory Id="Startup" Name="Auto-start">
+				<Component Id="Autostart" Guid="2de766f7-9ca5-4649-979a-237920a3ac8b">
+					<RegistryValue Id="AutostartReg" Root="HKCU" Action="write" Key="Software\Microsoft\Windows\CurrentVersion\Run" Type="string" Name="Toggle Dark-Light Mode" Value="&quot;[INSTALLDIR]toggle.exe&quot; /AUTOSTART" />
+					<Condition>START_FROM_REGISTRY</Condition>
+				</Component>
+			</Directory>
+		</Directory>
+		
+		<!-- Auto-start -->
+		<Property Id="START_FROM_REGISTRY">1</Property>
+
+		<!-- Close process -->
+		<InstallExecuteSequence>
+			<Custom Action="WixCloseApplications" Before="InstallValidate">Installed</Custom>
+			<!-- <RemoveExistingProducts After="InstallInitialize" /> -->
+		</InstallExecuteSequence>
+		<util:CloseApplication Id="CloseMonitor" Target="toggle.exe" CloseMessage="yes" RebootPrompt="no">
+			Installed
+		</util:CloseApplication>
+
+		<!-- Run on exit -->
+		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch Toggle Dark-Light Mode" />
+		<Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+		<Property Id="WixShellExecTarget" Value="[#toggleEXE]" />
+		<CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
+
+		<UI>
+			<!-- "WixUI_Minimal" / "WixUI_InstallDir" / "WixUI_Mondo" -->
+			<UIRef Id="WixUI_Mondo" />
+			<UIRef Id="WixUI_ErrorProgressText" />
+			<Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+		</UI>
+
+		<!-- Icons -->
+		<Icon Id="toggle.exe" SourceFile="toggle.exe" />
+		
+		<!-- Main settings -->
+		<Feature Id="Complete" Level="1" AllowAdvertise="no" Display="expand" Absent="disallow" ConfigurableDirectory="INSTALLDIR" Title="Toggle Dark-Light Mode Application" Description="Toggle Dark-Light Mode application program file (required).">
+			<ComponentRef Id="MainExecutable" />
+			<Feature Id="ProgramShortcut" Level="2" AllowAdvertise="no" Title="Start Menu Shortcut" Description="Start Menu entry to launch Toggle Dark-Light Mode.">
+				<ComponentRef Id="ProgramMenuDir" />
+			</Feature>
+			<Feature Id="ProgramAutostart" Level="3" AllowAdvertise="no" Title="Auto-Start at user log-in" Description="Each time the user logs-in, automatically start Toggle Dark-Light Mode.">
+				<ComponentRef Id="Autostart" />
+			</Feature>
+		</Feature>
+		<Property Id="WIXUI_INSTALLDIR" Value="INSTALLDIR" />
+		<Property Id="ARPPRODUCTICON" Value="toggle.exe" />
+		<Property Id="WixAppFolder" Value="WixPerUserFolder" /> <!-- "WixPerMachineFolder" / "WixPerUserFolder" -->
+		<WixVariable Id="WixUISupportPerUser" Value="1" />
+		<WixVariable Id="WixUISupportPerMachine" Value="0" />
+		<Property Id="ApplicationFolderName" Value="Toggle Dark-Light Mode" />
+		<!-- <Property Id="ALLUSERS" Value="0" /> -->
+		<Property Id="MSIINSTALLPERUSER" Value="1" />
+		<Property Id="INSTALLLEVEL" Value="3" />
+		 
+		<!-- UI customization -->
+		<WixVariable Id="WixUIBannerBmp" Value="bannrbmp.bmp" />  
+		<WixVariable Id="WixUIDialogBmp" Value="dlgbmp.bmp" />  
+		<WixVariable Id="WixUILicenseRtf" Value="LICENSE.rtf" />
+	</Product>
+</Wix>

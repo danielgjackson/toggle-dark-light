@@ -1,0 +1,1 @@
+@.\build.cmd && .\toggle.exe /CONSOLE:ATTACH /EXIT

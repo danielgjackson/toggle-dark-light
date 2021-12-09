@@ -1,0 +1,10 @@
+/*.exe
+/*.obj
+/*.res
+/*.o
+/*.pdb
+/*.ilk
+_local
+/*.wixobj
+/*.wixpdb
+/*.msi
