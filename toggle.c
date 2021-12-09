@@ -65,6 +65,7 @@ BOOL gbImmediatelyExit = FALSE;	// Quit right away (mainly for testing)
 BOOL gbExiting = FALSE;
 HANDLE ghStartEvent = NULL;		// Event for single instance
 int gVersion[4] = { 0, 0, 0, 0 };
+DWORD lastHotkey = 0;
 
 NOTIFYICONDATA nid = {0};
 
@@ -452,7 +453,8 @@ BOOL SetLightDark(DWORD light)
 	UINT msg = WM_THEMECHANGED;
 	WPARAM wParam = 0;
 	LPARAM lParam = 0;
-	SendNotifyMessage(hWnd, msg, wParam, lParam);
+	//SendNotifyMessage(hWnd, msg, wParam, lParam);
+	PostMessage(hWnd, msg, wParam, lParam);
 	
 	return TRUE;
 }
@@ -528,7 +530,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == HOT_KEY_ID)
 		{
-			ToggleDarkLight();
+			// Limit the rate of change from the hot key in case many are buffered
+			DWORD now = GetTickCount();
+			if (lastHotkey == 0 || (now - lastHotkey) >= 5000)
+			{
+				lastHotkey = now;
+				ToggleDarkLight();
+				return 0;
+			}
 		}
 	}
 
@@ -949,15 +958,15 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 		if (bHasMessage)
 		{
 			// Pre-translate so captured before child controls
-			if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
-			{
-				HideWindow();
-			}
-			if (!IsDialogMessage(hWnd, &msg))	// handles tabbing etc (avoid WM_USER=DM_GETDEFID / WM_USER+1=DM_SETDEFID)
-			{
+			//if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
+			//{
+			//	HideWindow();
+			//}
+			//if (!IsDialogMessage(hWnd, &msg))	// handles tabbing etc (avoid WM_USER=DM_GETDEFID / WM_USER+1=DM_SETDEFID)
+			//{
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
-			}
+			//}
 			if (msg.message == WM_QUIT) break;
 		}
 	}
