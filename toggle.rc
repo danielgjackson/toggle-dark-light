@@ -8,7 +8,7 @@ MAINICON ICON "icon.ico"
 #define STRINGIZE(x) STRINGIZE_HELPER(x)
 #define VER_MAJOR 1
 #define VER_MINOR 0
-#define VER_BUILD 0			// Patch ('build' in MS version order)
+#define VER_BUILD 5			// Patch ('build' in MS version order)
 #define VER_REVISION 0		// Build ('revision' in MS version order)
 #define VER_STRING STRINGIZE(VER_MAJOR) "." STRINGIZE(VER_MINOR) "." STRINGIZE(VER_BUILD) "." STRINGIZE(VER_REVISION)
 

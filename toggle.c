@@ -41,7 +41,7 @@ extern int _dup2(int fd1, int fd2);
 
 // Defines
 #define TITLE TEXT("Toggle Dark/Light Mode")
-#define TITLE_SAFE TEXT("Toggle")
+#define TITLE_SAFE TEXT("Toggle Dark-Light Mode")
 #define HOT_KEY_ID		0x0000
 #define WMAPP_NOTIFYCALLBACK (WM_APP + 1)
 #define IDM_TOGGLE		101
@@ -153,7 +153,7 @@ bool AutoStart(bool change, bool startup)
 	bool retVal = false;
 	HKEY hKeyMain = HKEY_CURRENT_USER;
 	TCHAR *subKey = TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run");
-	TCHAR *value = TITLE;
+	TCHAR *value = TITLE_SAFE;
 
 	TCHAR szModuleFileName[MAX_PATH];
 	GetModuleFileName(NULL, szModuleFileName, sizeof(szModuleFileName) / sizeof(szModuleFileName[0]));
