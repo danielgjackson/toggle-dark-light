@@ -62,6 +62,9 @@ BOOL gbAllowDuplicate = FALSE;
 BOOL gbSubsystemWindows = FALSE;
 BOOL gbHasConsole = FALSE;
 BOOL gbImmediatelyExit = FALSE;	// Quit right away (mainly for testing)
+BOOL gbSetDark = FALSE;
+BOOL gbSetLight = FALSE;
+BOOL gbQuery = FALSE;
 BOOL gbExiting = FALSE;
 HANDLE ghStartEvent = NULL;		// Event for single instance
 int gVersion[4] = { 0, 0, 0, 0 };
@@ -241,11 +244,6 @@ void ShowContextMenu(HWND hwnd, POINT pt)
 	DestroyMenu(hMenu);
 }
 
-void DumpDebug(FILE *file)
-{
-	 _ftprintf(file, TEXT("IsLight=%d\n"), IsLight());
-}
-
 BOOL HasExistingInstance(void)
 {
 	if (ghStartEvent)
@@ -356,7 +354,7 @@ void Startup(HWND hWnd)
 			if (gbImmediatelyExit) break;	// Allow duplicates if immediately exiting
 			duplicateInstance = HasExistingInstance();
 			if (!duplicateInstance) break;
-			response = MessageBox(NULL, TEXT("Toggle Dark/Light Mode is already running in the notification area.\r\nContinue to try to exit the previous instance and run this instead."), TITLE, MB_ICONWARNING | MB_CANCELTRYCONTINUE | MB_DEFBUTTON1);
+			response = MessageBox(NULL, TEXT("Toggle Dark/Light Mode is already running in the notification area.\r\nContinue with a new instance?"), TITLE, MB_ICONWARNING | MB_CANCELTRYCONTINUE | MB_DEFBUTTON1);
 			if (response == IDCANCEL)
 			{
 				gbNotify = FALSE;
@@ -365,11 +363,8 @@ void Startup(HWND hWnd)
 
 			if (response == IDCONTINUE)
 			{
-				_ftprintf(stderr, TEXT("NOTE: Sending quit message to event holder\n"));
-				SetEvent(ghStartEvent);
-				CloseHandle(ghStartEvent);
-				ghStartEvent = NULL;
-				Sleep(500);
+				gbAllowDuplicate = TRUE;
+				break;
 			}
 		} while (response == IDTRYAGAIN || response == IDCONTINUE);
 	}
@@ -457,26 +452,26 @@ BOOL SetLightDark(DWORD light)
 	UINT msg = WM_THEMECHANGED;
 	WPARAM wParam = 0;
 	LPARAM lParam = 0;
-	//SendNotifyMessage(hWnd, msg, wParam, lParam);
-	PostMessage(hWnd, msg, wParam, lParam);
+	SendNotifyMessage(hWnd, msg, wParam, lParam);
+	//PostMessage(hWnd, msg, wParam, lParam);
 	
 	return TRUE;
 }
 
-void ToggleDarkLight(void)
+void ToggleDarkLight(BOOL notify)
 {
 	_tprintf(TEXT("ToggleDarkLight()...\n"));
 	int isLight = IsLight();
 	if (isLight == 0)		// dark
 	{
 		_tprintf(TEXT("...isLight=FALSE, setting: light\n"));
-		Notify(TEXT("Toggle to light mode."));
+		if (notify) Notify(TEXT("Toggle to light mode."));
 		SetLightDark(1);
 	}
 	else if (isLight == 1)	// light
 	{
 		_tprintf(TEXT("...isLight=TRUE, setting: dark\n"));
-		Notify(TEXT("Toggle to dark mode."));
+		if (notify) Notify(TEXT("Toggle to dark mode."));
 		SetLightDark(0);
 	}
 	else
@@ -484,6 +479,11 @@ void ToggleDarkLight(void)
 		_tprintf(TEXT("...isLight=error\n"));
 	}
 	_tprintf(TEXT("...END: ToggleDarkLight()\n"));
+}
+
+void DumpDebug(FILE *file)
+{
+	 _ftprintf(file, TEXT("IsLight=%d\n"), IsLight());
 }
 
 // Open hyperlink from TaskDialog
@@ -539,7 +539,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (lastHotkey == 0 || (now - lastHotkey) >= 5000)
 			{
 				lastHotkey = now;
-				ToggleDarkLight();
+				ToggleDarkLight(TRUE);
 				return 0;
 			}
 		}
@@ -669,7 +669,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 				// mouse.x = LOWORD(wParam);
 				// mouse.y = HIWORD(wParam);
 				// OpenWindow(mouse.x, mouse.y);
-				ToggleDarkLight();
+				ToggleDarkLight(TRUE);
 			}
 			break;
 
@@ -821,6 +821,10 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 		else if (_tcsicmp(argv[i], TEXT("/NOPORTABLE")) == 0) { gbPortable = FALSE; }	// Allow override
 		else if (_tcsicmp(argv[i], TEXT("/ALLOWDUPLICATE")) == 0) { gbAllowDuplicate = TRUE; }
 		else if (_tcsicmp(argv[i], TEXT("/EXIT")) == 0) { gbImmediatelyExit = TRUE; }
+		else if (_tcsicmp(argv[i], TEXT("/DARK")) == 0) { gbSetLight = FALSE; gbSetDark = TRUE; }
+		else if (_tcsicmp(argv[i], TEXT("/LIGHT")) == 0) { gbSetLight = TRUE; gbSetDark = FALSE; }
+		else if (_tcsicmp(argv[i], TEXT("/TOGGLE")) == 0) { gbSetLight = TRUE; gbSetDark = TRUE; }
+		else if (_tcsicmp(argv[i], TEXT("/QUERY")) == 0) { gbQuery = TRUE; gbImmediatelyExit = TRUE; }
 		
 		else if (argv[i][0] == '/') 
 		{
@@ -858,7 +862,7 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 	if (bShowHelp) 
 	{
 		TCHAR msg[512] = TEXT("");
-		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("%s V%d.%d.%d  Daniel Jackson, 2021.\n\nParameters: [/NOTIFY|/NONOTIFY]\n\n"), TITLE, gVersion[0], gVersion[1], gVersion[2]);
+		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("%s V%d.%d.%d  Daniel Jackson, 2021.\n\nParameters: [/LIGHT|/DARK|/TOGGLE] [/EXIT]\n\n"), TITLE, gVersion[0], gVersion[1], gVersion[2]);
 		// [/CONSOLE:<ATTACH|CREATE|ATTACH-CREATE>]*  (* only as first parameter)
 		if (gbHasConsole)
 		{
@@ -869,6 +873,19 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 			MessageBox(NULL, msg, TITLE, MB_OK | MB_ICONERROR);
 		}
 		return -1;
+	}
+
+	// Options to change mode at start (can combine with /EXIT)
+	if (gbSetLight || gbSetDark)
+	{
+		if (gbSetLight && gbSetDark) ToggleDarkLight(FALSE);
+		else if (gbSetLight) SetLightDark(1);
+		else if (gbSetDark) SetLightDark(0);
+	}
+
+	// First opportunity to immediately exit
+	if (gbImmediatelyExit) {
+		return gbQuery ? IsLight() : 0;
 	}
 
 	// Initialize COM
@@ -921,58 +938,16 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 	HideWindow();  // nCmdShow
 	
 	// Shift+Win+D - Toggle Dark Mode
-	if (!RegisterHotKey(ghWndMain, HOT_KEY_ID, MOD_WIN | MOD_SHIFT | MOD_NOREPEAT, (UINT)'D'))
+ 	if (!gbImmediatelyExit && !RegisterHotKey(ghWndMain, HOT_KEY_ID, MOD_WIN | MOD_SHIFT | MOD_NOREPEAT, (UINT)'D'))
 	{
 		_ftprintf(stderr, TEXT("ERROR: Problem with RegisterHotKey(): 0x%08x\n"), GetLastError());
 	}
 
-	for (;;) {
-		BOOL bHasMessage = FALSE;
-		MSG msg;
-
-		// If we are waiting for the quit event to be signalled, use MsgWaitForMultipleObjects() rather than the blocking GetMessage()
-		if (ghStartEvent)
-		{
-			DWORD wait = WAIT_TIMEOUT;
-			wait = MsgWaitForMultipleObjects(1, &ghStartEvent, FALSE, INFINITE, QS_ALLINPUT);
-			if (wait == WAIT_OBJECT_0)
-			{	// Event signalled
-				_ftprintf(stderr, TEXT("NOTE: Quit event received\n"));
-				StartExit();
-			}
-			else if (wait == WAIT_OBJECT_0 + 1)
-			{	// Message available in queue
-				if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-				{
-					bHasMessage = TRUE;
-				}
-			}
-			else
-			{
-				_ftprintf(stderr, TEXT("ERROR: Unexpected response from MsgWaitForMultipleObjects() = 0x%8x\n"), wait);
-				break;
-			}
-		}
-		else
-		{	// Normal GetMessage() -- could probably list 0 count of events above instead of this special case
-			if (!GetMessage(&msg, NULL, 0, 0)) break;
-			bHasMessage = TRUE;
-		}
-		
-		if (bHasMessage)
-		{
-			// Pre-translate so captured before child controls
-			//if (msg.message == WM_KEYDOWN && msg.wParam == VK_ESCAPE)
-			//{
-			//	HideWindow();
-			//}
-			//if (!IsDialogMessage(hWnd, &msg))	// handles tabbing etc (avoid WM_USER=DM_GETDEFID / WM_USER+1=DM_SETDEFID)
-			//{
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
-			//}
-			if (msg.message == WM_QUIT) break;
-		}
+	MSG msg;
+	while (GetMessage(&msg, NULL, 0, 0) > 0)
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
 	}
 
 	UnregisterHotKey(hWnd, HOT_KEY_ID);

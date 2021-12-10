@@ -1,0 +1,53 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Project",
+			"dependsOn": ["Build Resource", "Build Code"],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Build Resource",
+			"command": "./vc.bat",
+			"args": [
+				"rc.exe",
+				"/nologo",
+				"${workspaceFolder}\\toggle.rc",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			]
+		},
+		{
+			"type": "shell",
+			"label": "Build Code",
+			"command": "./vc.bat",
+			"args": [
+				"cl.exe",
+				"/nologo",
+				"/Zi",
+				"/EHsc",
+				"/DUNICODE",
+				"/D_UNICODE",
+				"${workspaceFolder}\\*.c",
+				"/link",
+				"/out:${workspaceFolder}\\toggle.exe",
+				"${workspaceFolder}\\toggle.res",
+				"/subsystem:windows"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$msCompile"
+			]
+		}
+	]
+}
