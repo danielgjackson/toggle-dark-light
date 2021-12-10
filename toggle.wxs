@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Change the Product/@Id on any installation file changes. Modify the Product Version for any minor changes. -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-	<Product Name="Toggle Dark-Light Mode" Id="*" UpgradeCode="9bf9dd6a-aced-4905-98db-3572c6699b8d" Language="1033" Version="1.0.6.0" Manufacturer="danielgjackson">
+	<Product Name="Toggle Dark-Light Mode" Id="*" UpgradeCode="9bf9dd6a-aced-4905-98db-3572c6699b8d" Language="1033" Version="!(bind.FileVersion.toggleEXE)" Manufacturer="danielgjackson">
 		<Package Id="*" InstallerVersion="200" Compressed="yes" InstallScope="perUser" /><!-- "perMachine" / "perUser" -->
 		
 		<MajorUpgrade AllowDowngrades="yes" /><!-- AllowSameVersionUpgrades="yes" -->
