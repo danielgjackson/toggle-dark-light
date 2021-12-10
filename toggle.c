@@ -45,8 +45,8 @@ extern int _dup2(int fd1, int fd2);
 #define HOT_KEY_ID		0x0000
 #define WMAPP_NOTIFYCALLBACK (WM_APP + 1)
 #define IDM_TOGGLE		101
-#define IDM_DEBUG		102
-#define IDM_AUTOSTART	103
+#define IDM_AUTOSTART	102
+#define IDM_DEBUG		103
 #define IDM_ABOUT		104
 #define IDM_EXIT		105
 
@@ -215,9 +215,10 @@ void ShowContextMenu(HWND hwnd, POINT pt)
 	}
 
 	HMENU hMenu = CreatePopupMenu();
-	AppendMenu(hMenu, MF_STRING, IDM_TOGGLE, TEXT("&Toggle Dark/Light Mode"));
-	AppendMenu(hMenu, MF_STRING, IDM_DEBUG, TEXT("Save &Debug Info..."));
+	AppendMenu(hMenu, MF_STRING, IDM_TOGGLE, TEXT("&Toggle Dark/Light Mode\tWin+Shift+D"));
+	AppendMenu(hMenu, MF_SEPARATOR, 0, TEXT("Separator"));
 	AppendMenu(hMenu, MF_STRING | autoStartFlags, IDM_AUTOSTART, TEXT("Auto-&Start"));
+	AppendMenu(hMenu, MF_STRING, IDM_DEBUG, TEXT("Save &Debug Info..."));
 	AppendMenu(hMenu, MF_STRING, IDM_ABOUT, TEXT("&About"));
 	AppendMenu(hMenu, MF_SEPARATOR, 0, TEXT("Separator"));
 	AppendMenu(hMenu, MF_STRING, IDM_EXIT, TEXT("E&xit"));
@@ -552,7 +553,19 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 					// POINT mouse;
 					// GetCursorPos(&mouse);
 					// OpenWindow(mouse.x, mouse.y);
-					ToggleDarkLight();
+					ToggleDarkLight(TRUE);
+				}
+				break;
+			case IDM_AUTOSTART:
+				if (AutoStart(false, false))
+				{
+					// Is auto-starting, remove
+					AutoStart(true, false);
+				}
+				else
+				{
+					// Is not auto-starting, add
+					AutoStart(true, true);
 				}
 				break;
 			case IDM_DEBUG:
@@ -589,18 +602,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 							ShellExecute(NULL, TEXT("open"), openFilename.lpstrFile, NULL, NULL, SW_SHOW);
 						}
 					}
-				}
-				break;
-			case IDM_AUTOSTART:
-				if (AutoStart(false, false))
-				{
-					// Is auto-starting, remove
-					AutoStart(true, false);
-				}
-				else
-				{
-					// Is not auto-starting, add
-					AutoStart(true, true);
 				}
 				break;
 			case IDM_ABOUT:

@@ -26,7 +26,16 @@ When the application is running, an icon for *Toggle Dark/Light Mode* will appea
 3. Right-click the icon for a menu:
 
     * *Toggle Dark/Light Mode* - Toggles between dark and light modes (same as left-clicking the icon).
-    * *Save Debug Info* - This will prompt to save a text (`.txt`) file with debugging information.
     * *Auto-Start* - Toggles whether the executable will be automatically run when you log in.
+    * *Save Debug Info* - This will prompt to save a text (`.txt`) file with debugging information.
     * *About* - Information about the program.
     * *Exit* - Stops the program and removes the icon. (If *Auto-Start* is enabled, it will start when you log-in again)
+
+
+## Advanced Use
+
+The executable can be used to directly set the mode (and optionally exit):
+
+* `toggle /TOGGLE /EXIT`
+* `toggle /LIGHT /EXIT`
+* `toggle /DARK /EXIT`
