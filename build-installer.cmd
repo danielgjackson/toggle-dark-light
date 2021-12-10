@@ -3,6 +3,8 @@ SETLOCAL EnableDelayedExpansion
 CD /D %~dp0
 
 rem If launched from anything other than cmd.exe, will have "%WINDIR%\system32\cmd.exe" in the command line
+set INTERACTIVE_IBUILD=
+IF "%1"=="/NONINTERACTIVE" GOTO NONINTERACTIVE
 ECHO.%CMDCMDLINE% | FINDSTR /C:"%COMSPEC% /c" >NUL
 IF ERRORLEVEL 1 GOTO NONINTERACTIVE
 rem Preserve this as it seems to be corrupted below otherwise?!
@@ -11,8 +13,19 @@ rem If launched from anything other than cmd.exe, last character of command line
 IF NOT ^!CMDCMDLINE:~-1!==^" GOTO NONINTERACTIVE
 rem If run from Explorer, last-but-one character of command line will be a space
 IF NOT "!CMDLINE:~-2,1!"==" " GOTO NONINTERACTIVE
-SET INTERACTIVE=1
+SET INTERACTIVE_IBUILD=1
 :NONINTERACTIVE
+
+::: Build first
+CALL ./build.cmd
+IF ERRORLEVEL 1 GOTO ERROR
+
+::: Extract version
+set VER=
+for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_MAJOR"`) do set VER=%%f
+for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_MINOR"`) do set VER=%VER%.%%f
+for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_BUILD"`) do set VER=%VER%.%%f
+rem for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_REVISION"`) do set VER=%VER%.%%f
 
 :PATH_CANDLE
 SET WIX_PATH=
@@ -78,12 +91,12 @@ rem IF ERRORLEVEL 1 GOTO ERROR
 "%WINDOWSKIT_PATH%signtool.exe" sign /debug /v /a /f "D:\Certificates\mycert.pfx" /d "Toggle Light/Dark" %TIMESTAMP_SERVER% "toggle.msi"
 IF ERRORLEVEL 1 GOTO ERROR
 
-ECHO Done.
-IF DEFINED INTERACTIVE COLOR 2F & PAUSE & COLOR
+ECHO Done: V%VER%
+IF DEFINED INTERACTIVE_IBUILD COLOR 2F & PAUSE & COLOR
 GOTO :EOF
 
 :ERROR
 ECHO ERROR: An error occured.
-IF DEFINED INTERACTIVE COLOR 4F & PAUSE & COLOR
+IF DEFINED INTERACTIVE_IBUILD COLOR 4F & PAUSE & COLOR
 EXIT /B 1
 GOTO :EOF
