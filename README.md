@@ -28,16 +28,11 @@ This is an open source ([MIT License](https://github.com/danielgjackson/toggle-d
 
 3. Right-click the icon for a menu:
 
-    * Toggle Dark/Light Mode
-      : Toggles between dark and light modes (same as left-clicking the icon).
-    * Auto-Start
-      : Toggles whether the executable will be automatically run when you log in.
-    * Save Debug Info
-      : This will prompt to save a text (`.txt`) file with debugging information.
-    * About
-      : Information about the program.
-    * Exit
-      : Stops the program and removes the icon. (If *Auto-Start* is enabled, it will start when you log-in again)
+    * *Toggle Dark/Light Mode* - Toggles between dark and light modes (same as left-clicking the icon).
+    * *Auto-Start* - Toggles whether the executable will be automatically run when you log in.
+    * *Save Debug Info* - This will prompt to save a text (`.txt`) file with debugging information.
+    * *About* - Information about the program.
+    * *Exit* - Stops the program and removes the icon. (If *Auto-Start* is enabled, it will start when you log-in again)
 
 
 ## Advanced Use
