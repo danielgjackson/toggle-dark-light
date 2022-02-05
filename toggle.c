@@ -642,7 +642,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 					{
 						if (nClickedBtn == 1001)
 						{
-							ShellExecute(hwnd, TEXT("open"), TEXT("https://github.com/danielgjackson/toggle-dark-light/"), NULL, NULL, SW_SHOW);
+							ShellExecute(hwnd, TEXT("open"), TEXT("https://github.com/danielgjackson/toggle-dark-light/#readme"), NULL, NULL, SW_SHOW);
 						}
 						else if (nClickedBtn == 1002)
 						{
