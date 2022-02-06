@@ -8,3 +8,4 @@ _local
 /*.wixobj
 /*.wixpdb
 /*.msi
+/build

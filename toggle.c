@@ -2,6 +2,7 @@
 // Dan Jackson, 2021.
 
 #define _WIN32_WINNT 0x0601
+#define _CRT_SECURE_NO_WARNINGS  // TODO: Use more secure versions
 #include <windows.h>
 #include <tchar.h>
 
@@ -10,6 +11,7 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <time.h>
+#include <io.h>
 
 #include <rpc.h>
 #include <dbt.h>
@@ -32,11 +34,6 @@
 #pragma comment(lib, "gdi32.lib")		// CreateFontIndirect()
 #pragma comment(lib, "User32.lib")		// Windows
 #pragma comment(lib, "ole32.lib")		// CoInitialize(), etc.
-#endif
-
-// Missing define in gcc?
-#ifndef _MSC_VER
-extern int _dup2(int fd1, int fd2);
 #endif
 
 // Defines
@@ -178,7 +175,7 @@ bool AutoStart(bool change, bool startup)
 			if (startup)
 			{
 				// Setting to auto-start
-				lErrorCode = RegSetValueEx(hKey, value, 0, REG_SZ, (const BYTE *)szAutoStartValue, (_tcslen(szAutoStartValue) + 1) * sizeof(TCHAR));
+				lErrorCode = RegSetValueEx(hKey, value, 0, REG_SZ, (const BYTE *)szAutoStartValue, (DWORD)((_tcslen(szAutoStartValue) + 1) * sizeof(TCHAR)));
 				if (lErrorCode == ERROR_SUCCESS)
 				{
 					retVal = true;
@@ -714,7 +711,7 @@ void done(EXCEPTION_POINTERS *exceptionInfo)
 	if (exceptionInfo)
 	{
 		TCHAR msg[512] = TEXT("");
-		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("ERROR: An unhandled error has occurred."), TITLE);
+		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("ERROR: An unhandled error has occurred."));
 		// [/CONSOLE:<ATTACH|CREATE|ATTACH-CREATE>]*  (* only as first parameter)
 		if (gbHasConsole)
 		{
@@ -993,7 +990,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCm
 		}
 		else if (_tcsicmp(argv[argOffset], TEXT("/CONSOLE:DEBUG")) == 0)	// Use existing console
 		{
-			_dup2(fileno(stderr), fileno(stdout));	// stdout to stderr (stops too much interleaving from buffering while debugging)
+			_dup2(_fileno(stderr), _fileno(stdout));	// stdout to stderr (stops too much interleaving from buffering while debugging)
 			fflush(stdout);
 			hasConsole = TRUE;
 		}
