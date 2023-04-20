@@ -1,1 +1,1 @@
-@.\build.cmd && .\toggle.exe /CONSOLE:ATTACH /EXIT
+@.\build.cmd && .\toggle.exe /CONSOLE:ATTACH /TOGGLE /EXIT

@@ -34,6 +34,7 @@
 #pragma comment(lib, "gdi32.lib")		// CreateFontIndirect()
 #pragma comment(lib, "User32.lib")		// Windows
 #pragma comment(lib, "ole32.lib")		// CoInitialize(), etc.
+// #pragma comment(lib, "psapi.lib")		// GetModuleFileName() // -lpsapi
 #endif
 
 // Defines
@@ -443,6 +444,8 @@ BOOL SetLightDark(DWORD light)
 	}
 	
 	RegCloseKey(hKey);
+
+	Sleep(500);
 	
 	// Broadcast WM_THEMECHANGED
 	HWND hWnd = HWND_BROADCAST;
@@ -450,8 +453,45 @@ BOOL SetLightDark(DWORD light)
 	WPARAM wParam = 0;
 	LPARAM lParam = 0;
 	SendNotifyMessage(hWnd, msg, wParam, lParam);
-	//PostMessage(hWnd, msg, wParam, lParam);
-	
+
+/*
+	// Attempt to make explorer.exe recognize the change
+
+	Sleep(500);
+
+	HWND hWndExplorer = FindWindow(TEXT("Shell_TrayWnd"), NULL);
+	if (hWndExplorer) {
+		_tprintf(TEXT("Explorer found: %p\n"), hWndExplorer);
+		PostMessage(hWndExplorer, msg, wParam, lParam);
+		PostMessage(hWndExplorer, msg, wParam, lParam);
+	} else {
+		_tprintf(TEXT("Explorer not found.\n"));
+	}
+
+	HWND hWndSecondaryExplorer = FindWindow(TEXT("Shell_SecondaryTrayWnd"), NULL);
+	if (hWndSecondaryExplorer) {
+		_tprintf(TEXT("Secondary Explorer found: %p\n"), hWndSecondaryExplorer);
+		PostMessage(hWndSecondaryExplorer, msg, wParam, lParam);
+	} else {
+		_tprintf(TEXT("Secondary Explorer not found.\n"));
+	}
+*/	
+
+	// #include <shlobj.h>
+	//SHChangeNotify(SHCNE_ASSOCCHANGED, 0x00000000, NULL, NULL);
+
+	// Kill explorer.exe (does not auto-restart)
+	//PostMessage(FindWindow(TEXT("Shell_TrayWnd"), NULL), WM_USER+436, 0, 0);
+
+	// Kill explorer.exe (auto-restarts; loses file explorer windows)
+/*
+	HWND hSysTray = FindWindow (TEXT("Shell_TrayWnd"), NULL) ;
+	DWORD dwPID;
+	GetWindowThreadProcessId(hSysTray, &dwPID);
+	HANDLE hExp = OpenProcess(PROCESS_TERMINATE, FALSE, dwPID);
+	if (hExp) { TerminateProcess(hExp, 0); CloseHandle(hExp); }
+*/
+
 	return TRUE;
 }
 
