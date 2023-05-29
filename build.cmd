@@ -1,6 +1,6 @@
 @ECHO OFF
 SETLOCAL EnableDelayedExpansion
-CD /D %~dp0
+PUSHD %~dp0
 
 rem If launched from anything other than cmd.exe, will have "%WINDIR%\system32\cmd.exe" in the command line
 set INTERACTIVE_BUILD=
@@ -35,8 +35,8 @@ rem x86 x64
 SET ARCH=x64
 SET VCVARSALL=
 FOR %%f IN (70 71 80 90 100 110 120 130 140) DO IF EXIST "!VS%%fCOMNTOOLS!\..\..\VC\vcvarsall.bat" SET VCVARSALL=!VS%%fCOMNTOOLS!\..\..\VC\vcvarsall.bat
-FOR /F "usebackq tokens=*" %%f IN (`DIR /B /ON "%ProgramFiles(x86)%\Microsoft Visual Studio\????"`) DO FOR %%g IN (Community Professional Enterprise) DO IF EXIST "%ProgramFiles(x86)%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat" SET "VCVARSALL=%ProgramFiles(x86)%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat"
-FOR /F "usebackq tokens=*" %%f IN (`DIR /B /ON "%ProgramFiles%\Microsoft Visual Studio\????"`) DO FOR %%g IN (Community Professional Enterprise) DO IF EXIST "%ProgramFiles%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat" SET "VCVARSALL=%ProgramFiles%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat"
+FOR /F "usebackq tokens=*" %%f IN (`DIR /B /ON "%ProgramFiles(x86)%\Microsoft Visual Studio\????"`) DO FOR %%g IN (BuildTools Community Professional Enterprise) DO IF EXIST "%ProgramFiles(x86)%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat" SET "VCVARSALL=%ProgramFiles(x86)%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat"
+FOR /F "usebackq tokens=*" %%f IN (`DIR /B /ON "%ProgramFiles%\Microsoft Visual Studio\????"`) DO FOR %%g IN (BuildTools Community Professional Enterprise) DO IF EXIST "%ProgramFiles%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat" SET "VCVARSALL=%ProgramFiles%\Microsoft Visual Studio\%%f\%%g\VC\Auxiliary\Build\vcvarsall.bat"
 IF "%VCVARSALL%"=="" ECHO Cannot find C compiler environment for 'vcvarsall.bat'. & GOTO ERROR
 ECHO Setting environment variables for C compiler... %VCVARSALL%
 CALL "%VCVARSALL%" %ARCH%
@@ -54,12 +54,14 @@ rem /manifest:embed  -- now external .manifest is included in .rc file
 link %NOLOGO% /out:toggle.exe toggle toggle.res /subsystem:windows
 IF ERRORLEVEL 1 GOTO ERROR
 ECHO Done: V%VER%
-
 IF DEFINED INTERACTIVE_BUILD COLOR 2F & PAUSE & COLOR
-GOTO :EOF
+GOTO END
 
 :ERROR
 ECHO ERROR: An error occured.
-IF DEFINED INTERACTIVE_BUILD COLOR 4F & PAUSE & COLOR
+POPD
+IF DEFINED INTERACTIVE COLOR 4F & PAUSE & COLOR
 EXIT /B 1
-GOTO :EOF
+
+:END
+POPD
