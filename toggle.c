@@ -66,7 +66,6 @@ BOOL gbQuery = FALSE;
 BOOL gbExiting = FALSE;
 HANDLE ghStartEvent = NULL;		// Event for single instance
 int gVersion[4] = { 0, 0, 0, 0 };
-DWORD lastHotkey = 0;
 
 NOTIFYICONDATA nid = {0};
 
@@ -463,7 +462,8 @@ BOOL SetLightDark(DWORD light)
 	
 	RegCloseKey(hKey);
 
-	//Sleep(500);
+	// Delay -- this appears to help update taskbars on other displays
+	Sleep(1000);
 	
 	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- required by some apps such as explorer.exe (File Explorer)
 	{
@@ -474,8 +474,6 @@ BOOL SetLightDark(DWORD light)
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
-	//Sleep(500);
-	
 	// Broadcast a second WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- this second broadcast fixes Task Manager
 	{
 		HWND hWnd = HWND_BROADCAST;
@@ -485,7 +483,8 @@ BOOL SetLightDark(DWORD light)
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
-	// Broadcast WM_THEMECHANGED
+
+	// // Broadcast WM_THEMECHANGED
 	// {
 	// 	HWND hWnd = HWND_BROADCAST;
 	// 	UINT msg = WM_THEMECHANGED;
@@ -603,14 +602,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		if (wParam == HOT_KEY_ID)
 		{
-			// Limit the rate of change from the hot key in case many are buffered
-			DWORD now = GetTickCount();
-			if (lastHotkey == 0 || (now - lastHotkey) >= 5000)
-			{
-				lastHotkey = now;
-				ToggleDarkLight(TRUE);
-				return 0;
-			}
+			ToggleDarkLight(TRUE);
+
+			// Remove any repeated WM_HOTKEY messages from the window queue
+			MSG m;
+			while (PeekMessage(&m, hwnd, WM_HOTKEY, WM_HOTKEY, PM_REMOVE)) { ; }
+
+			return 0;
 		}
 	}
 
