@@ -463,9 +463,9 @@ BOOL SetLightDark(DWORD light)
 	
 	RegCloseKey(hKey);
 
-	Sleep(500);
+	//Sleep(500);
 	
-	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet"
+	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- required by some apps such as explorer.exe (File Explorer)
 	{
 		HWND hWnd = HWND_BROADCAST;
 		UINT msg = WM_SETTINGCHANGE;
@@ -474,7 +474,18 @@ BOOL SetLightDark(DWORD light)
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
-	// // Broadcast WM_THEMECHANGED
+	//Sleep(500);
+	
+	// Broadcast a second WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- this second broadcast fixes Task Manager
+	{
+		HWND hWnd = HWND_BROADCAST;
+		UINT msg = WM_SETTINGCHANGE;
+		WPARAM wParam = 0;
+		LPARAM lParam = (LPARAM)TEXT("ImmersiveColorSet");
+		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
+	}
+
+	// Broadcast WM_THEMECHANGED
 	// {
 	// 	HWND hWnd = HWND_BROADCAST;
 	// 	UINT msg = WM_THEMECHANGED;
@@ -491,6 +502,8 @@ BOOL SetLightDark(DWORD light)
 	// 	LPARAM lParam = 0;
 	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	// }
+
+	// WM_DWMCOMPOSITIONCHANGED
 
 
 	// TODO: If occasional File Explorer glitches remain, consider these:
