@@ -462,8 +462,8 @@ BOOL SetLightDark(DWORD light)
 	
 	RegCloseKey(hKey);
 
-	// Delay -- this appears to help update taskbars on other displays
-	Sleep(1000);
+	// Delay -- this may to help update taskbars on other displays?
+	Sleep(500);
 	
 	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- required by some apps such as explorer.exe (File Explorer)
 	{
@@ -471,6 +471,15 @@ BOOL SetLightDark(DWORD light)
 		UINT msg = WM_SETTINGCHANGE;
 		WPARAM wParam = 0;
 		LPARAM lParam = (LPARAM)TEXT("ImmersiveColorSet");
+		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
+	}
+
+	// Broadcast WM_THEMECHANGED -- this may to help update taskbars on other displays?
+	{
+		HWND hWnd = HWND_BROADCAST;
+		UINT msg = WM_THEMECHANGED;
+		WPARAM wParam = 0;
+		LPARAM lParam = 0;
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
@@ -482,16 +491,6 @@ BOOL SetLightDark(DWORD light)
 		LPARAM lParam = (LPARAM)TEXT("ImmersiveColorSet");
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
-
-
-	// // Broadcast WM_THEMECHANGED
-	// {
-	// 	HWND hWnd = HWND_BROADCAST;
-	// 	UINT msg = WM_THEMECHANGED;
-	// 	WPARAM wParam = 0;
-	// 	LPARAM lParam = 0;
-	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
-	// }
 
 	// // Broadcast WM_SYSCOLORCHANGE
 	// {
