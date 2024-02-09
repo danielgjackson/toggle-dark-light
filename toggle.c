@@ -491,6 +491,17 @@ BOOL SetLightDark(DWORD light)
 	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	// }
 
+
+	// TODO: If occasional File Explorer glitches remain, consider these:
+
+	// #include <shlobj.h>
+	
+	// SHCNE_ASSOCCHANGED (SHCNF_IDLIST=0x00000000)
+	//SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL); 
+
+	// SHCNE_ALLEVENTS
+	//SHChangeNotify(SHCNE_ALLEVENTS, 0, NULL, NULL); 
+
 	// // Broadcast WM_PAINT
 	// {
 	// 	long res = BroadcastSystemMessageEx(BSF_POSTMESSAGE, NULL, WM_PAINT, 0, 0, NULL); // BSF_POSTMESSAGE / BSF_SENDNOTIFYMESSAGE
