@@ -27,31 +27,17 @@ for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]V
 for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_BUILD"`) do set VER=%VER%.%%f
 rem for /f "tokens=3 usebackq" %%f in (`type toggle.rc ^| findstr /R /C:"#define[ ]VER_REVISION"`) do set VER=%VER%.%%f
 
-:PATH_CANDLE
-SET WIX_PATH=
-SET FIND_CANDLE=
-FOR %%p IN (candle.exe) DO SET "FIND_CANDLE=%%~$PATH:p"
-IF NOT DEFINED FIND_CANDLE GOTO LOCATE_CANDLE
-SET WIX_PATH=%FIND_CANDLE:~0,-10%
-ECHO WiX Toolset located on path: %WIX_PATH%
-GOTO BUILD
-
-:LOCATE_CANDLE
-ECHO Searching for WiX Toolset...
-FOR /F "usebackq tokens=*" %%f IN (`DIR /B /ON "%ProgramFiles(x86)%\WiX Toolset*"`) DO IF EXIST "%ProgramFiles(x86)%\%%f\bin\candle.exe" SET "WIX_PATH=%ProgramFiles(x86)%\%%f\bin\"
-IF "%WIX_PATH%"=="" ECHO Cannot find WiX Toolset & GOTO ERROR
-ECHO WiX Toolset found at: %WIX_PATH%
-
-:BUILD
-ECHO Building...
-"%WIX_PATH%candle.exe" -ext WixUtilExtension toggle.wxs
-IF ERRORLEVEL 1 GOTO ERROR
-
-ECHO Building...
-"%WIX_PATH%light.exe" -sice:ICE91 -ext WixUtilExtension -ext WixUIExtension toggle.wixobj
-IF ERRORLEVEL 1 GOTO ERROR
-
-
+::: Using .wixproj for WiX V4
+dotnet build -c Release toggle.wixproj
+IF ERRORLEVEL 1 (
+  ECHO If WiX Toolset not installed:
+  ECHO   dotnet tool install --global wix
+  REM ECHO   dotnet add package WixToolset.UI.wixext
+  REM ECHO   dotnet add package WixToolset.Util.wixext
+  ECHO.
+  GOTO ERROR
+)
+copy /Y bin\Release\toggle.msi toggle.msi
 
 :PATH_WINDOWSKIT
 SET WINDOWSKIT_PATH=
@@ -91,6 +77,7 @@ rem IF ERRORLEVEL 1 GOTO ERROR
 "%WINDOWSKIT_PATH%signtool.exe" sign /debug /v /a /f "D:\Certificates\mycert.pfx" /d "Toggle Light/Dark" %TIMESTAMP_SERVER% "toggle.msi"
 IF ERRORLEVEL 1 GOTO ERROR
 
+ECHO.
 ECHO Done: V%VER%
 IF DEFINED INTERACTIVE_IBUILD COLOR 2F & PAUSE & COLOR
 GOTO :EOF

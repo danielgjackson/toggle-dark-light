@@ -9,3 +9,5 @@ _local
 /*.wixpdb
 /*.msi
 /build
+/obj
+/bin

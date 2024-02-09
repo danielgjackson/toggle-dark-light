@@ -1,0 +1,12 @@
+<Project Sdk="WixToolset.Sdk/4.0.4">
+  <!--
+  <PropertyGroup>
+    <EnableProjectHarvesting>True</EnableProjectHarvesting>
+    <ReferenceOutputAssembly>False</ReferenceOutputAssembly>
+  </PropertyGroup>
+  -->
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="4.0.4" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="4.0.4" />
+  </ItemGroup>
+</Project>
