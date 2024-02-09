@@ -1,5 +1,5 @@
 // Toggle Dark/Light Mode -- icon in the taskbar notification area
-// Dan Jackson, 2021.
+// Dan Jackson, 2021-2024.
 
 #define _WIN32_WINNT 0x0601
 #define _CRT_SECURE_NO_WARNINGS  // TODO: Use more secure versions
@@ -399,7 +399,7 @@ int IsLight(void)
 	{
 		_tprintf(TEXT("ERROR: RegOpenKeyEx() failed (%d): %ls\n"), lErrorCode, subKey);
 		return -1;
-	}	
+	}
 	
 	// Query current value
 	DWORD dwFlags = RRF_RT_REG_DWORD;
@@ -422,15 +422,21 @@ BOOL SetLightDark(DWORD light)
 	const TCHAR *subKey = TEXT("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize");
 	const TCHAR *valueSystem = TEXT("SystemUsesLightTheme");
 	const TCHAR *valueApps = TEXT("AppsUseLightTheme");
+	const TCHAR *valueColorPrevalence = TEXT("ColorPrevalence");
 	
 	HKEY hKey = NULL;
 	LSTATUS lErrorCode = RegOpenKeyEx(hKeyMain, subKey, 0, KEY_SET_VALUE, &hKey);
-	if (lErrorCode != ERROR_SUCCESS) return FALSE;
+	if (lErrorCode != ERROR_SUCCESS)
+	{
+		_tprintf(TEXT("ERROR: RegOpenKeyEx() failed (%d): %ls\n"), lErrorCode, subKey);
+		return FALSE;
+	}	
 
 	// Set the system key
 	lErrorCode = RegSetValueEx(hKey, valueSystem, 0, REG_DWORD, (const BYTE *)&light, sizeof(light));
 	if (lErrorCode != ERROR_SUCCESS)
 	{
+		_tprintf(TEXT("ERROR: RegSetValueEx() failed (%d): %ls - %ls\n"), lErrorCode, subKey, valueSystem);
 		RegCloseKey(hKey);
 		return FALSE;
 	}
@@ -439,6 +445,17 @@ BOOL SetLightDark(DWORD light)
 	lErrorCode = RegSetValueEx(hKey, valueApps, 0, REG_DWORD, (const BYTE *)&light, sizeof(light));
 	if (lErrorCode != ERROR_SUCCESS)
 	{
+		_tprintf(TEXT("ERROR: RegSetValueEx() failed (%d): %ls - %ls\n"), lErrorCode, subKey, valueApps);
+		RegCloseKey(hKey);
+		return FALSE;
+	}
+
+	// Set the ColorPrevalence key
+	DWORD colorPrevalence = light ? 0 : 1;
+	lErrorCode = RegSetValueEx(hKey, valueColorPrevalence, 0, REG_DWORD, (const BYTE *)&colorPrevalence, sizeof(colorPrevalence));
+	if (lErrorCode != ERROR_SUCCESS)
+	{
+		_tprintf(TEXT("ERROR: RegSetValueEx() failed (%d): %ls - %ls\n"), lErrorCode, subKey, valueColorPrevalence);
 		RegCloseKey(hKey);
 		return FALSE;
 	}
@@ -447,50 +464,40 @@ BOOL SetLightDark(DWORD light)
 
 	Sleep(500);
 	
-	// Broadcast WM_THEMECHANGED
-	HWND hWnd = HWND_BROADCAST;
-	UINT msg = WM_THEMECHANGED;
-	WPARAM wParam = 0;
-	LPARAM lParam = 0;
-	SendNotifyMessage(hWnd, msg, wParam, lParam);
-
-/*
-	// Attempt to make explorer.exe recognize the change
-
-	Sleep(500);
-
-	HWND hWndExplorer = FindWindow(TEXT("Shell_TrayWnd"), NULL);
-	if (hWndExplorer) {
-		_tprintf(TEXT("Explorer found: %p\n"), hWndExplorer);
-		PostMessage(hWndExplorer, msg, wParam, lParam);
-		PostMessage(hWndExplorer, msg, wParam, lParam);
-	} else {
-		_tprintf(TEXT("Explorer not found.\n"));
+	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet"
+	{
+		HWND hWnd = HWND_BROADCAST;
+		UINT msg = WM_SETTINGCHANGE;
+		WPARAM wParam = 0;
+		LPARAM lParam = (LPARAM)TEXT("ImmersiveColorSet");
+		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
-	HWND hWndSecondaryExplorer = FindWindow(TEXT("Shell_SecondaryTrayWnd"), NULL);
-	if (hWndSecondaryExplorer) {
-		_tprintf(TEXT("Secondary Explorer found: %p\n"), hWndSecondaryExplorer);
-		PostMessage(hWndSecondaryExplorer, msg, wParam, lParam);
-	} else {
-		_tprintf(TEXT("Secondary Explorer not found.\n"));
-	}
-*/	
+	// // Broadcast WM_THEMECHANGED
+	// {
+	// 	HWND hWnd = HWND_BROADCAST;
+	// 	UINT msg = WM_THEMECHANGED;
+	// 	WPARAM wParam = 0;
+	// 	LPARAM lParam = 0;
+	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
+	// }
 
-	// #include <shlobj.h>
-	//SHChangeNotify(SHCNE_ASSOCCHANGED, 0x00000000, NULL, NULL);
+	// // Broadcast WM_SYSCOLORCHANGE
+	// {
+	// 	HWND hWnd = HWND_BROADCAST;
+	// 	UINT msg = WM_SYSCOLORCHANGE;
+	// 	WPARAM wParam = 0;
+	// 	LPARAM lParam = 0;
+	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
+	// }
 
-	// Kill explorer.exe (does not auto-restart)
-	//PostMessage(FindWindow(TEXT("Shell_TrayWnd"), NULL), WM_USER+436, 0, 0);
-
-	// Kill explorer.exe (auto-restarts; loses file explorer windows)
-/*
-	HWND hSysTray = FindWindow (TEXT("Shell_TrayWnd"), NULL) ;
-	DWORD dwPID;
-	GetWindowThreadProcessId(hSysTray, &dwPID);
-	HANDLE hExp = OpenProcess(PROCESS_TERMINATE, FALSE, dwPID);
-	if (hExp) { TerminateProcess(hExp, 0); CloseHandle(hExp); }
-*/
+	// // Broadcast WM_PAINT
+	// {
+	// 	long res = BroadcastSystemMessageEx(BSF_POSTMESSAGE, NULL, WM_PAINT, 0, 0, NULL); // BSF_POSTMESSAGE / BSF_SENDNOTIFYMESSAGE
+	// 	if (res <= 0) {
+	// 		_tprintf(TEXT("ERROR: BroadcastSystemMessageEx() WM_PAINT failed (0x%x / 0x%x)\n"), res, GetLastError());
+	// 	}
+	// }
 
 	return TRUE;
 }
