@@ -21,7 +21,7 @@
       padding-top: 50px;
       padding-bottom: 50px;
       hyphens: auto;
-      word-wrap: break-word;
+      overflow-wrap: break-word;
       text-rendering: optimizeLegibility;
       font-kerning: normal;
     }
@@ -29,6 +29,9 @@
       body {
         font-size: 0.9em;
         padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
       }
     }
     @media print {
@@ -92,6 +95,7 @@
     pre code {
       padding: 0;
       overflow: visible;
+      overflow-wrap: normal;
     }
     .sourceCode {
      background-color: transparent;
@@ -133,6 +137,12 @@
     #TOC li {
       list-style: none;
     }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
     #TOC a:not(:hover) {
       text-decoration: none;
     }
@@ -152,38 +162,68 @@
 <header id="title-block-header">
 <h1 class="title">Toggle Dark/Light Mode</h1>
 </header>
-<p>Single click toggle between dark mode and light mode using an icon in the Windows taskbar notification area (system tray). This may be useful for anyone working under significantly changing background or reflected light levels.</p>
+<p>Single click toggle between dark mode and light mode using an icon in
+the Windows taskbar notification area (system tray). This may be useful
+for anyone working under significantly changing background or reflected
+light levels.</p>
 <figure>
-<img src="screenshot.png" alt="Screenshot showing the application icon in the notification area" /><figcaption aria-hidden="true">Screenshot showing the application icon in the notification area</figcaption>
+<img src="screenshot.png"
+alt="Screenshot showing the application icon in the notification area" />
+<figcaption aria-hidden="true">Screenshot showing the application icon
+in the notification area</figcaption>
 </figure>
-<p>This is an open source (<a href="https://github.com/danielgjackson/toggle-dark-light/blob/master/LICENSE.txt">MIT License</a>) application, and the project repository is at:</p>
+<p>This is an open source (<a
+href="https://github.com/danielgjackson/toggle-dark-light/blob/master/LICENSE.txt">MIT
+License</a>) application, and the project repository is at:</p>
 <ul>
-<li><a href="https://github.com/danielgjackson/toggle-dark-light">github.com/danielgjackson/toggle-dark-light</a></li>
+<li><a
+href="https://github.com/danielgjackson/toggle-dark-light">github.com/danielgjackson/toggle-dark-light</a></li>
 </ul>
 <h1 id="installation">Installation</h1>
 <ol type="1">
 <li><p>Download the installer <code>toggle.msi</code> from:</p>
 <ul>
-<li><a href="https://github.com/danielgjackson/toggle-dark-light/releases/latest">Releases</a></li>
+<li><a
+href="https://github.com/danielgjackson/toggle-dark-light/releases/latest">Releases</a></li>
 </ul></li>
-<li><p>Double-click to run the downloaded installer. As Windows will not recognize the program, you may need to select <em>More info</em> / <em>Run anyway</em>. Follow the prompts to install the application.</p></li>
-<li><p>The application will run after installation (by default), and an icon for <em>Toggle Dark/Light Mode</em> will appear in the taskbar notification area (system tray). It might be in the <em>Taskbar overflow</em> menu behind the <strong>ᐱ</strong> symbol (this can be changed in the <em>Taskbar Settings</em>).</p></li>
+<li><p>Double-click to run the downloaded installer. As Windows will not
+recognize the program, you may need to select <em>More info</em> /
+<em>Run anyway</em>. Follow the prompts to install the
+application.</p></li>
+<li><p>The application will run after installation (by default), and an
+icon for <em>Toggle Dark/Light Mode</em> will appear in the taskbar
+notification area (system tray). It might be in the <em>Taskbar
+overflow</em> menu behind the <strong>ᐱ</strong> symbol (this can be
+changed in the <em>Taskbar Settings</em>).</p></li>
 </ol>
 <h1 id="use">Use</h1>
 <ol type="1">
-<li><p>Left-click the icon to immediately toggle dark/light mode.</p></li>
-<li><p>Use the shortcut key combination <kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> to toggle between dark and light mode.</p></li>
+<li><p>Left-click the icon to immediately toggle dark/light
+mode.</p></li>
+<li><p>Use the shortcut key combination
+<kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> to toggle between dark and
+light mode.</p></li>
 <li><p>Right-click the icon for a menu:</p>
 <ul>
-<li><em>Toggle Dark/Light Mode</em> - Toggles between dark and light modes (same as left-clicking the icon).</li>
-<li><em>Auto-Start</em> - Toggles whether the executable will be automatically run when you log in.</li>
-<li><em>Save Debug Info</em> - This will prompt to save a text (<code>.txt</code>) file with debugging information.</li>
+<li><em>Toggle Dark/Light Mode</em> - Toggles between dark and light
+modes (same as left-clicking the icon).</li>
+<li><em>Auto-Start</em> - Toggles whether the executable will be
+automatically run when you log in.</li>
+<li><em>Save Debug Info</em> - This will prompt to save a text
+(<code>.txt</code>) file with debugging information.</li>
 <li><em>About</em> - Information about the program.</li>
-<li><em>Exit</em> - Stops the program and removes the icon. (If <em>Auto-Start</em> is enabled, it will start when you log-in again)</li>
+<li><em>Exit</em> - Stops the program and removes the icon. (If
+<em>Auto-Start</em> is enabled, it will start when you log-in
+again)</li>
 </ul></li>
 </ol>
 <h1 id="advanced-use">Advanced Use</h1>
-<p>The executable can be used to directly set the mode (and optionally exit afterwards):</p>
+<p>You do not need to install the application, but instead just download
+and run the <code>toggle.exe</code> executable directly (i.e. as a
+<em>portable app</em>).</p>
+<p>The executable takes command-line options and can be used to directly
+set the mode and optionally exit without remaining as an icon in the
+taskbar notification area, for example:</p>
 <ul>
 <li><code>toggle /TOGGLE /EXIT</code></li>
 <li><code>toggle /LIGHT /EXIT</code></li>
@@ -191,7 +231,8 @@
 </ul>
 <hr />
 <ul>
-<li><a href="https://danielgjackson.github.io/toggle-dark-light">danielgjackson.github.io/toggle-dark-light</a></li>
+<li><a
+href="https://danielgjackson.github.io/toggle-dark-light">danielgjackson.github.io/toggle-dark-light</a></li>
 </ul>
 </body>
 </html>

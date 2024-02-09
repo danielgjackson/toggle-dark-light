@@ -37,7 +37,9 @@ This is an open source ([MIT License](https://github.com/danielgjackson/toggle-d
 
 ## Advanced Use
 
-The executable can be used to directly set the mode (and optionally exit afterwards):
+You do not need to install the application, but instead just download and run the `toggle.exe` executable directly (i.e. as a *portable app*).
+
+The executable takes command-line options and can be used to directly set the mode and optionally exit without remaining as an icon in the taskbar notification area, for example:
 
 * `toggle /TOGGLE /EXIT`
 * `toggle /LIGHT /EXIT`
