@@ -451,7 +451,8 @@ BOOL SetLightDark(DWORD light)
 	}
 
 	// Set the ColorPrevalence key
-	DWORD colorPrevalence = light ? 0 : 1;
+	DWORD colorPrevalence = 0;		// HACK: Force off for now as we don't know the previous state (TODO: Option to set this value in dark mode)
+	if (light) colorPrevalence = 0;	// Always off in light mode?
 	lErrorCode = RegSetValueEx(hKey, valueColorPrevalence, 0, REG_DWORD, (const BYTE *)&colorPrevalence, sizeof(colorPrevalence));
 	if (lErrorCode != ERROR_SUCCESS)
 	{
