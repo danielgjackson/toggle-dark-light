@@ -415,6 +415,55 @@ int IsLight(void)
 	return -1;	// error
 }
 
+// Data for sending messages to specific windows
+typedef struct {
+	UINT msg;
+	WPARAM wParam;
+	LPARAM lParam;
+	TCHAR *className;
+	TCHAR *classNameAlt;
+	UINT count;
+} send_message_t;
+
+BOOL CALLBACK SendEnumWindowsProc(HWND hWnd, LPARAM lParam) 
+{
+	send_message_t *msgData = (send_message_t *)lParam;
+	if (!hWnd) return TRUE;
+
+	// Filter by class name
+	if (msgData->className != NULL || msgData->classNameAlt != NULL)
+	{
+		TCHAR szClassName[256];
+		GetClassName(hWnd, szClassName, sizeof(szClassName) / sizeof(szClassName[0]));
+
+		BOOL match = false;
+		if (msgData->className != NULL && _tcscmp(szClassName, msgData->className) == 0) match = true;
+		if (msgData->classNameAlt != NULL && _tcscmp(szClassName, msgData->classNameAlt) == 0) match = true;
+
+		if (!match) return TRUE;
+	}
+
+	SendMessage(hWnd, msgData->msg, msgData->wParam, msgData->lParam);
+	//PostMessage(hWnd, msgData->msg, msgData->wParam, msgData->lParam);
+	msgData->count++;
+	return TRUE;
+}
+
+// Send a message just to non-primary display taskbars (which seem a bit troublesome...)
+UINT SendToTaskbar(UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	send_message_t msgData = {0};
+	msgData.msg = msg;
+	msgData.wParam = wParam;
+	msgData.lParam = lParam;
+	msgData.className = (TCHAR *)&TEXT("Shell_TrayWnd");
+	msgData.classNameAlt = (TCHAR *)&TEXT("Shell_SecondaryTrayWnd");
+	msgData.count = 0;
+	BOOL result = EnumWindows(SendEnumWindowsProc, (LPARAM)&msgData);
+	if (!result) return 0;
+	return (UINT)msgData.count;
+}
+
 BOOL SetLightDark(DWORD light)
 {
 	HKEY hKeyMain = HKEY_CURRENT_USER;
@@ -429,7 +478,7 @@ BOOL SetLightDark(DWORD light)
 	{
 		_tprintf(TEXT("ERROR: RegOpenKeyEx() failed (%d): %ls\n"), lErrorCode, subKey);
 		return FALSE;
-	}	
+	}
 
 	// Set the system key
 	lErrorCode = RegSetValueEx(hKey, valueSystem, 0, REG_DWORD, (const BYTE *)&light, sizeof(light));
@@ -459,13 +508,17 @@ BOOL SetLightDark(DWORD light)
 		RegCloseKey(hKey);
 		return FALSE;
 	}
-	
+
 	RegCloseKey(hKey);
 
 	// Delay -- this may to help update taskbars on other displays?
-	Sleep(500);
+	//Sleep(500);
 	
-	// Broadcast WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- required by some apps such as explorer.exe (File Explorer)
+	// Send WM_SETTINGCHANGE message directly to primary and secondary taskbars
+	UINT countSC = SendToTaskbar(WM_SETTINGCHANGE, 0, (LPARAM)TEXT("ImmersiveColorSet"));
+	_tprintf(TEXT("SendToTaskbar(WM_SETTINGCHANGE): %d\n"), countSC);
+
+	// Broadcast WM_SETTINGCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- required by some apps such as explorer.exe (File Explorer)
 	{
 		HWND hWnd = HWND_BROADCAST;
 		UINT msg = WM_SETTINGCHANGE;
@@ -474,16 +527,7 @@ BOOL SetLightDark(DWORD light)
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
 
-	// Broadcast WM_THEMECHANGED -- this may to help update taskbars on other displays?
-	{
-		HWND hWnd = HWND_BROADCAST;
-		UINT msg = WM_THEMECHANGED;
-		WPARAM wParam = 0;
-		LPARAM lParam = 0;
-		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
-	}
-
-	// Broadcast a second WM_SETTINGSCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- this second broadcast fixes Task Manager
+	// Broadcast a second WM_SETTINGCHANGE using SendMessageTimeout with lParam set to "ImmersiveColorSet" -- this second broadcast fixes Task Manager
 	{
 		HWND hWnd = HWND_BROADCAST;
 		UINT msg = WM_SETTINGCHANGE;
@@ -491,6 +535,15 @@ BOOL SetLightDark(DWORD light)
 		LPARAM lParam = (LPARAM)TEXT("ImmersiveColorSet");
 		SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
 	}
+
+	// // Broadcast WM_THEMECHANGED
+	// {
+	// 	HWND hWnd = HWND_BROADCAST;
+	// 	UINT msg = WM_THEMECHANGED;
+	// 	WPARAM wParam = 0;
+	// 	LPARAM lParam = 0;
+	// 	SendMessageTimeout(hWnd, msg, wParam, lParam, SMTO_ABORTIFHUNG, 5000, NULL);
+	// }
 
 	// // Broadcast WM_SYSCOLORCHANGE
 	// {
