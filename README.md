@@ -48,3 +48,7 @@ The executable takes command-line options and can be used to directly set the mo
 ---
 
   * [danielgjackson.github.io/toggle-dark-light](https://danielgjackson.github.io/toggle-dark-light)
+
+<!--
+* TODO: Check for updates: in non-portable mode, at start-up, if auto-update enabled, if "last fetch attempt" time (from registry) is at least one day ago, store "last fetch attempt" time and spawn thread to attempt to fetch `https://api.github.com/repos/danielgjackson/toggle-dark-light/releases?per_page=1`, take online version as `[0].tag_name`.  If successfully parsed online version, if different to "last prompted version" (from registry) and different to current software version information then prompt user with new version number and to visit releases page, and store as "last prompted version".
+-->
