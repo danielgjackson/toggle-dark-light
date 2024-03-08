@@ -22,6 +22,9 @@
 // Notify icons
 #include <shellapi.h>
 
+// Internet (update check)
+#include <WinInet.h>
+
 // MSC-Specific Pragmas
 #ifdef _MSC_VER
 // Moved to external .manifest file linked through .rc file
@@ -34,12 +37,18 @@
 #pragma comment(lib, "gdi32.lib")		// CreateFontIndirect()
 #pragma comment(lib, "User32.lib")		// Windows
 #pragma comment(lib, "ole32.lib")		// CoInitialize(), etc.
+#pragma comment (lib, "wininet.lib")	// WinInet functions: InternetOpenW / InternetConnectW / HttpOpenRequestW / HttpSendRequestW / InternetReadFile / InternetCloseHandle
 // #pragma comment(lib, "psapi.lib")		// GetModuleFileName() // -lpsapi
 #endif
 
 // Defines
+#define COPYRIGHT_NAME "Daniel Jackson"
+#define COPYRIGHT_YEAR "2021-2024"
 #define TITLE TEXT("Toggle Dark/Light Mode")
 #define TITLE_SAFE TEXT("Toggle Dark-Light Mode")
+#define USER_AGENT_BASE TEXT("toggle-dark-light")
+#define UPDATE_URL TEXT("https://api.github.com/repos/danielgjackson/toggle-dark-light/releases?per_page=1")
+#define RELEASES_URL TEXT("https://github.com/danielgjackson/toggle-dark-light/releases/latest")
 #define HOT_KEY_ID		0x0000
 #define WMAPP_NOTIFYCALLBACK (WM_APP + 1)
 #define IDM_TOGGLE		101
@@ -65,6 +74,7 @@ BOOL gbSetLight = FALSE;
 BOOL gbQuery = FALSE;
 BOOL gbExiting = FALSE;
 HANDLE ghStartEvent = NULL;		// Event for single instance
+TCHAR gUserAgent[128] = USER_AGENT_BASE;
 int gVersion[4] = { 0, 0, 0, 0 };
 
 NOTIFYICONDATA nid = {0};
@@ -90,6 +100,207 @@ static BOOL RedirectIOToConsole(BOOL tryAttach, BOOL createIfRequired)
 		freopen("CONOUT$", "w", stderr);
 	}
 	return hasConsole;
+}
+
+int HttpGet(const TCHAR *url, const TCHAR *headers, char **response, size_t *responseSize)
+{
+	// Initialize WinInet
+	HINTERNET hInternet = InternetOpen(gUserAgent, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
+	if (hInternet == NULL)
+	{
+		_ftprintf(stderr, TEXT("GET: InternetOpen() failed (%d)\n"), GetLastError());
+		return -1;
+	}
+
+	// Open the URL
+	HINTERNET hResource = InternetOpenUrl(hInternet, url, headers, (DWORD)-1, INTERNET_FLAG_NO_UI | INTERNET_FLAG_NO_AUTH | INTERNET_FLAG_PRAGMA_NOCACHE | INTERNET_FLAG_NO_CACHE_WRITE, (DWORD_PTR)NULL);
+	if (hResource == NULL)
+	{
+		_ftprintf(stderr, TEXT("GET: InternetOpenUrl() failed (%d)\n"), GetLastError());
+		InternetCloseHandle(hInternet);
+		return -1;
+	}
+
+	// Read response
+	char *buffer = NULL;
+	size_t bufferSize = 0, bufferCapacity = 0;
+	DWORD bytesRead;
+	do
+	{
+		const size_t chunkSize = 4096;
+		if (bufferSize + chunkSize > bufferCapacity) {
+			bufferCapacity += chunkSize;
+			buffer = (char *)realloc(buffer, bufferCapacity + 1);	// null terminated for easier handling of string responses
+			if (buffer == NULL)
+			{
+				_ftprintf(stderr, TEXT("GET: Memory allocation failed\n"));
+				InternetCloseHandle(hResource);
+				InternetCloseHandle(hInternet);
+				return -1;
+			}
+		}
+		bytesRead = 0;
+		if (!InternetReadFile(hResource, (LPVOID)(buffer + bufferSize), bufferCapacity - bufferSize, &bytesRead))
+		{
+			_ftprintf(stderr, TEXT("GET: InternetReadFile() failed (%d)\n"), GetLastError());
+			free(buffer);
+			InternetCloseHandle(hResource);
+			InternetCloseHandle(hInternet);
+			return -1;
+		}
+		bufferSize += bytesRead;
+	} while (bytesRead > 0);
+	buffer[bufferSize] = '\0';
+	//_ftprintf(stderr, TEXT("GET: InternetReadFile() total read: %u\n"), (unsigned int)bufferSize);
+
+	// Clean up
+	InternetCloseHandle(hResource);
+	InternetCloseHandle(hInternet);
+
+	// Assign return values
+	if (response)
+	{
+		*response = buffer;
+	} else {
+		free(buffer);
+	}
+	if (responseSize)
+	{
+		*responseSize = bufferSize;
+	}
+	return 0;
+}
+
+bool FindOnlineVersion(char *version, size_t versionSize)
+{
+	sprintf(version, "");
+
+	// Check for updates
+	const TCHAR *url = UPDATE_URL;
+	const TCHAR *headers = NULL;  // TEXT("Accept: application/json");
+	char *response = NULL;
+	size_t responseSize = 0;
+	int result = HttpGet(url, headers, &response, &responseSize);
+	if (result < 0)
+	{
+		_ftprintf(stderr, TEXT("FindOnlineVersion() failed: %d\n"), result);
+		return false;
+	}
+	if (responseSize < 2 || response[0] != '[' || response[1] != '{')
+	{
+		_ftprintf(stderr, TEXT("FindOnlineVersion() failed: unexpected response\n"));
+		free(response);
+		return false;
+	}
+
+	// Dump response
+	//_ftprintf(stderr, TEXT("---\n%S\n---\n"), response);
+
+	// Hackily Locate tag_name ("tag_name":"1.0.##")
+	const char *prefix = "\"tag_name\":\"";
+	const char *suffix = "\"";
+	bool located = false;
+	char *tagStart = strstr(response, prefix);
+	if (tagStart)
+	{
+		tagStart += strlen(prefix);
+		char *tagEnd = strstr(tagStart, suffix);
+		if (tagEnd)
+		{
+			// Copy version string
+			size_t tagLength = tagEnd - tagStart;
+			if (tagLength < versionSize - 1)
+			{
+				memcpy(version, tagStart, tagLength);
+				version[tagLength] = '\0';
+				located = true;
+			}
+		}
+	}
+
+	if (!located)
+	{
+		_ftprintf(stderr, TEXT("FindOnlineVersion() failed: tag_name not found in response\n"));
+		free(response);
+		return false;
+	}
+
+	//_ftprintf(stderr, TEXT("FindOnlineVersion() found version: %s\n"), version);
+	return true;
+}
+
+const char *CheckForUpdatedVersion() {
+	char currentVersion[32] = {0};
+	sprintf(currentVersion, "%u.%u.%u", (unsigned int)gVersion[0], (unsigned int)gVersion[1], (unsigned int)gVersion[2]);
+
+	_ftprintf(stderr, TEXT("UPDATE: Inline version update check... (current=%S)\n"), currentVersion);
+
+	// Caution: static buffer
+	static char onlineVersion[32] = {0};
+	if (!FindOnlineVersion(onlineVersion, sizeof(onlineVersion) / sizeof(onlineVersion[0])))
+	{
+		_ftprintf(stderr, TEXT("UPDATE: Online version check failed.\n"));
+		return NULL;
+	}
+	else
+	{
+		_ftprintf(stderr, TEXT("UPDATE: Online version: %S\n"), onlineVersion);
+		if (strcmp(currentVersion, onlineVersion) != 0)
+		{
+			_ftprintf(stderr, TEXT("UPDATE: A newer version is available online.\n"));
+			return onlineVersion;
+		}
+		else
+		{
+			// Online version is the same as the current version
+			sprintf(onlineVersion, "");
+			return onlineVersion;
+		}
+	}
+	return NULL;
+}
+
+/*
+TODO: Check for updates: only in non-portable mode, at start-up, if auto-update enabled, 
+if "last fetch attempt" time (from registry) is at least one day ago, store "last fetch attempt" time and 
+spawn thread to attempt to fetch `https://api.github.com/repos/danielgjackson/toggle-dark-light/releases?per_page=1`, 
+take online version as `[0].tag_name`.  If successfully parsed online version, if different to "last prompted version" 
+(from registry) and different to current software version information then prompt user with new version number and to 
+visit releases page, and store as "last prompted version".
+*/
+// (From About dialog) Immediately check the online version, and prompt the user as necessary.
+void QueryUpdate()
+{
+	char currentVersion[32] = {0};
+	sprintf(currentVersion, "%u.%u.%u", (unsigned int)gVersion[0], (unsigned int)gVersion[1], (unsigned int)gVersion[2]);
+
+	// Caution: blocking online check for new version
+	HCURSOR hPreviousCursor = SetCursor(LoadCursor(NULL, IDC_WAIT));
+	const char *updatedVersion = CheckForUpdatedVersion();
+	SetCursor(hPreviousCursor);
+
+	if (updatedVersion != NULL && updatedVersion[0] == '\0')
+	{
+		MessageBox(NULL, TEXT("You are using the latest version."), TEXT("Updates"), MB_OK | MB_ICONINFORMATION);
+	}
+	else if (updatedVersion == NULL)
+	{
+		int result = MessageBox(NULL, TEXT("Unable to check for updates - visit the releases page?"), TEXT("Updates"), MB_OKCANCEL | MB_ICONERROR);
+		if (result == IDOK)
+		{
+			ShellExecute(ghWndMain, TEXT("open"), RELEASES_URL, NULL, NULL, SW_SHOW);
+		}
+	}
+	else
+	{
+		TCHAR szMessage[256] = TEXT("");
+		_sntprintf(szMessage, sizeof(szMessage) / sizeof(szMessage[0]), TEXT("You are on version %S, but a different version is available online: %S\nVisit the releases page?"), currentVersion, updatedVersion);
+		int result = MessageBox(NULL, szMessage, TEXT("Updates"), MB_OKCANCEL | MB_ICONINFORMATION);
+		if (result == IDOK)
+		{
+			ShellExecute(ghWndMain, TEXT("open"), RELEASES_URL, NULL, NULL, SW_SHOW);
+		}
+	}
 }
 
 void DeleteNotificationIcon(void)
@@ -733,10 +944,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 					_sntprintf(szHeader, sizeof(szHeader) / sizeof(szHeader[0]), TEXT("%s V%d.%d.%d"), TITLE, gVersion[0], gVersion[1], gVersion[2]);
 					TCHAR *szContent = TEXT("Toggle dark/light mode.\nKeyboard shortcut: Win+Shift+D");
 					//TCHAR *szExtraInfo = TEXT("...");
-					TCHAR *szFooter = TEXT("Open source under <a href=\"https://github.com/danielgjackson/toggle-dark-light/blob/master/LICENSE.txt\">MIT License</a>, \u00A92021 Daniel Jackson.");
+					TCHAR *szFooter = TEXT("Open source under <a href=\"https://github.com/danielgjackson/toggle-dark-light/blob/master/LICENSE.txt\">MIT License</a>, \u00A9" COPYRIGHT_YEAR " " COPYRIGHT_NAME ".");
 					TASKDIALOG_BUTTON aCustomButtons[] = {
 						{ 1001, L"Project page\ngithub.com/danielgjackson/toggle-dark-light" },
-						{ 1002, L"Check for updates\nSee the latest release" },
+						{ 1002, L"Check for updates" },
 					};
 					TASKDIALOGCONFIG tdc = {0};
 					tdc.cbSize = sizeof(tdc);
@@ -765,7 +976,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 						}
 						else if (nClickedBtn == 1002)
 						{
-							ShellExecute(hwnd, TEXT("open"), TEXT("https://github.com/danielgjackson/toggle-dark-light/releases/latest"), NULL, NULL, SW_SHOW);
+							QueryUpdate();
 						}
 					}
 				}
@@ -923,6 +1134,7 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 		}
 		free(verData);
 	}
+	_stprintf(gUserAgent, TEXT("%s/%u.%u.%u.%u\n"), USER_AGENT_BASE, (unsigned int)gVersion[0], (unsigned int)gVersion[1], (unsigned int)gVersion[2], (unsigned int)gVersion[3]);
 
 	BOOL bShowHelp = FALSE;
 	int positional = 0;
@@ -981,7 +1193,7 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 	if (bShowHelp) 
 	{
 		TCHAR msg[512] = TEXT("");
-		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("%s V%d.%d.%d  Daniel Jackson, 2021.\n\nParameters: [/LIGHT|/DARK|/TOGGLE] [/EXIT]\n\n"), TITLE, gVersion[0], gVersion[1], gVersion[2]);
+		_sntprintf(msg, sizeof(msg) / sizeof(msg[0]), TEXT("%s V%d.%d.%d " COPYRIGHT_NAME ", " COPYRIGHT_YEAR ".\n\nParameters: [/LIGHT|/DARK|/TOGGLE] [/EXIT]\n\n"), TITLE, gVersion[0], gVersion[1], gVersion[2]);
 		// [/CONSOLE:<ATTACH|CREATE|ATTACH-CREATE>]*  (* only as first parameter)
 		if (gbHasConsole)
 		{
@@ -1002,17 +1214,17 @@ int run(int argc, TCHAR *argv[], HINSTANCE hInstance, BOOL hasConsole)
 		else if (gbSetDark) SetLightDark(0);
 	}
 
-	// First opportunity to immediately exit
-	if (gbImmediatelyExit) {
-		return gbQuery ? IsLight() : 0;
-	}
-
 	// Initialize COM
 	HRESULT hr;
 	hr = CoInitializeEx(0, COINIT_MULTITHREADED);
 	if (FAILED(hr)) { fprintf(stderr, "ERROR: Failed CoInitializeEx().\n"); return 1; }
 	hr = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, NULL);
 	if (FAILED(hr)) { fprintf(stderr, "ERROR: Failed CoInitializeSecurity().\n"); return 2; }
+
+	// Opportunity to immediately exit before window-specific code
+	if (gbImmediatelyExit) {
+		return gbQuery ? IsLight() : 0;
+	}
 
 	// Initialize common controls
 	INITCOMMONCONTROLSEX icce = {0};
