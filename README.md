@@ -1,5 +1,7 @@
 # Toggle Dark/Light Mode
 
+> **Important:** VS Code 1.89 has included [some changes](https://code.visualstudio.com/updates/v1_89#_auto-detect-system-color-mode-improvements) that have broken tracking the system theme *and* being able to temporarily override a single window with another theme -- see: [issue #17](https://github.com/danielgjackson/vscode-auto-dark-mode-windows/issues/17).
+
 Single click toggle between dark mode and light mode using an icon in the Windows taskbar notification area (system tray).  This may be useful for anyone working under significantly changing background or reflected light levels.
 
 ![Screenshot showing the application icon in the notification area](screenshot.png)
